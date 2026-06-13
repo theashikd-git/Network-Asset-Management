@@ -2,7 +2,7 @@
 
 <img src="https://img.shields.io/badge/Xpie-Network%20Asset%20Management-0d6efd?style=for-the-badge&logoColor=white" alt="Xpie Banner"/>
 
-# 🖧 Xpie — Network Asset Management System
+# 🖧 Xpie  Network Asset Management System
 
 **A web-based administration system built for managing IT assets, network IP allocations,**  
 **and procurement wishlists within an organisation.**
