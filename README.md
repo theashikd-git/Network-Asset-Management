@@ -1,14 +1,15 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Xpie-Network%20Asset%20Management-0d6efd?style=for-the-badge&logoColor=white" alt="Xpie Banner"/>
+<img src="https://img.shields.io/badge/NAMIAS-Network%20Asset%20Management-4f46e5?style=for-the-badge&logoColor=white" alt="NAMIAS Banner"/>
 
-# 🖧 Xpie  Network Asset Management System
+# 🖧 NAMIAS — Network Asset Management Information System
 
-**A web-based administration system built for managing IT assets, network IP allocations,**  
-**and procurement wishlists within an organisation.**
+**A web-based administration system for managing IT assets, network IP allocations,**
+**and procurement wishlists within an organisation — with role-based access control.**
 
-Designed to give IT administrators a centralised dashboard to track hardware,  
-monitor warranty status, and manage network configurations.
+Gives IT administrators a centralised dashboard to track hardware, monitor warranty
+status, run filtered reports, and manage network configurations — while regular staff
+get a clean read-only view.
 
 <br/>
 
@@ -23,39 +24,67 @@ monitor warranty status, and manage network configurations.
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Roles & Access Control](#roles--access-control)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Database Structure](#database-structure)
 - [Getting Started](#getting-started)
+- [Default Login](#default-login)
 - [Project Structure](#project-structure)
-- [Screenshots](#screenshots)
+- [Security](#security)
 
 ---
 
 ## Overview
 
-Xpie is a simple yet functional IT management system developed using PHP and MySQL. It allows administrators to log in securely and manage the following areas from a single interface: asset inventory, asset reporting, IP/VLAN allocation, and a wishlist for procurement requests. The system was built as part of an academic project to demonstrate full-stack web development skills using core web technologies.
+NAMIAS is a functional IT management system built with PHP and MySQL. Administrators log
+in securely and manage everything from a single interface: asset inventory, filtered asset
+and warranty reports, IP/VLAN allocation, a procurement wishlist, and user accounts.
+Regular users can view all the data but cannot change it. The system demonstrates
+full-stack web development using core web technologies, with role-based access control and
+standard security practices (hashed passwords, prepared statements, CSRF protection).
+
+---
+
+## Roles & Access Control
+
+There are two roles. Access is enforced **on the server**, not just by hiding buttons, so
+a read-only user cannot bypass it by crafting requests.
+
+| Capability | Admin | User |
+|---|:---:|:---:|
+| View dashboard, assets, reports, IP allocation, wishlist | ✅ | ✅ (read-only) |
+| Add / edit / delete assets, IPs, wishlist items | ✅ | ❌ |
+| Run, filter, and export reports | ✅ | ✅ |
+| User Management (create users, reset passwords, change roles, delete) | ✅ | ❌ |
 
 ---
 
 ## Features
 
-### 🔐 Authentication
-- Secure login with username and password
-- Session-based access control — all pages are protected from unauthorized access
-- Logout functionality that destroys the session completely
+### 🔐 Authentication & Users
+- Secure login with **hashed passwords** (`password_hash` / `password_verify`)
+- Session-based access control — every page is protected; session ID regenerated on login
+- **User Management (admin only):** create users, reset any user's password, change a
+  user's role, and delete accounts (you cannot delete or demote your own account)
+- Default admin account is created automatically on first run
 
 ### 📦 Asset Management
 - Add, edit, and delete IT assets (laptops, monitors, peripherals, etc.)
-- Track product name, category, brand, quantity, department, and physical location
-- Record warranty start and end dates with a note field
-- Dynamic dropdowns for Category, Department, and Place — with inline add functionality (no page reload)
+- Track product name, category, quantity, department, physical location, and warranty dates
+- Dynamic dropdowns for Category, Department, and Place — with inline add (no page reload)
 - Inline edit via modal, delete with confirmation prompt
+- Read-only users see the data without the editing controls
 
-### 📊 Asset Report
-- Consolidated report showing quantity per product grouped by department and location
-- Displays per-row quantity alongside the total quantity across all departments for that product
-- Color-coded rows for easy reading
+### 📊 Reports
+- **Asset Report** — assets grouped by **Department, Category, or Place** (selectable),
+  with per-group subtotals and a grand total quantity
+- **Warranty Expiry Report** — assets sorted by warranty end date with colour-coded status
+  (expired / under 30 days / under 90 days / healthy)
+- **Filters** on both reports: Category, Department, Place, and a **date range** (added date
+  for assets, expiry date for warranty)
+- **Export to CSV** (opens cleanly in Excel) and **Print / Save as PDF**, with the current
+  filters applied
 
 ### 🌐 IP Allocation
 - Add and manage IP address allocations with CIDR notation
@@ -69,10 +98,9 @@ Xpie is a simple yet functional IT management system developed using PHP and MyS
 - Admin can update status and details via edit modal
 
 ### 🖥️ Dashboard
-- Overview of recent assets added
-- Quick view of IP allocations
+- Stat cards: total assets, IP allocations, pending wishlist items, user accounts
+- Recent assets, recent IP allocations, and latest wishlist requests
 - Warranty remaining countdown (skips already-expired items)
-- Latest wishlist requests at a glance
 
 ---
 
@@ -82,7 +110,7 @@ Xpie is a simple yet functional IT management system developed using PHP and MyS
 |---|---|
 | Backend | PHP (procedural) |
 | Database | MySQL |
-| Frontend | HTML5, Bootstrap 5.3 |
+| Frontend | HTML5, Bootstrap 5.3, custom theme |
 | JavaScript | jQuery 3.7, Bootstrap JS |
 | Server | Apache (XAMPP / WAMP recommended) |
 
@@ -90,17 +118,20 @@ Xpie is a simple yet functional IT management system developed using PHP and MyS
 
 ## Database Structure
 
-The system uses a single database (`xpie_dp`) with the following tables:
+The system uses a single database (`namias_db`) with the following tables:
 
 | Table | Description |
 |---|---|
-| `users` | Stores login credentials |
-| `assets` | Stores all IT asset records |
+| `users` | Login credentials (hashed password) and role (`ADMIN` / `USER`) |
+| `assets` | All IT asset records |
 | `categories` | Asset category options |
 | `departments` | Department options |
 | `places` | Physical location options |
 | `ip_allocations` | IP address and VLAN records |
 | `wishlist` | Procurement request items |
+
+> **Note:** the `users.password` column is `VARCHAR(255)` to hold bcrypt hashes. No
+> plaintext admin is seeded in SQL — the app creates the default admin on first run.
 
 ---
 
@@ -111,66 +142,80 @@ The system uses a single database (`xpie_dp`) with the following tables:
 - PHP 7.4 or higher
 - MySQL 5.7 or higher
 
-## Project Structure
-
-```
-xpie/
-├── db.php                  # Database connection
-├── login.php               # Login page
-├── logout.php              # Session destroy & redirect
-├── dashboard.php           # Admin dashboard overview
-├── assets.php              # Asset management (CRUD)
-├── assets_report.php       # Asset quantity report
-├── ip_allocation.php       # IP & VLAN management (CRUD)
-├── wishlist.php            # Wishlist/procurement requests
-└── sql.sql                 # Database schema and seed data
-```
-
----
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/theashikd-git/xpie.git
+1. **Place the project in your server root**
+   ```
+   XAMPP: C:/xampp/htdocs/namias
+   WAMP:  C:/wamp64/www/namias
    ```
 
-2. **Move the project to your server root**
-   ```
-   XAMPP: C:/xampp/htdocs/xpie
-   WAMP:  C:/wamp64/www/xpie
-   ```
-
-3. **Import the database**
+2. **Import the database**
    - Open **phpMyAdmin**
-   - Create a new database named `xpie_dp`
-   - Import the `sql.sql` file from the project root
+   - Import `SQL.sql` (it creates the `namias_db` database and all tables)
 
-4. **Configure the database connection**
-   - Open `db.php`
-   - Update the credentials if needed:
+3. **Configure the database connection**
+   - Open `db.php` and update if your credentials differ:
      ```php
      $host = "localhost";
      $user = "root";
      $pass = "";
-     $db   = "xpie_dp";
+     $db   = "namias_db";
      ```
 
-5. **Run the project**
+4. **Run the project**
    - Start Apache and MySQL from XAMPP/WAMP
-   - Open your browser and go to:
-     ```
-     http://localhost/xpie/login.php
-     ```
+   - Open: `http://localhost/namias/login.php`
 
-6. **Default login credentials**
-   ```
-   Username: admin
-   Password: admin123
-   ```
+---
+
+## Default Login
+
+On the first visit, if the `users` table is empty, the app automatically creates an
+administrator:
+
+```
+Username: admin
+Password: admin123
+```
+
+**Log in and change this password immediately** from the *User Management* page, then
+create accounts for your team (Admin for full control, User for read-only).
+
+---
+
+## Project Structure
+
+```
+namias/
+├── db.php                  # Database connection
+├── auth.php                # Session, role guards, CSRF, escaping, first-run admin seed
+├── layout.php              # Shared sidebar + theme (header/footer helpers)
+├── login.php               # Login page (hashed-password verification)
+├── logout.php              # Session destroy & redirect
+├── dashboard.php           # Overview with stat cards
+├── assets.php              # Asset management (admin CRUD / user read-only)
+├── assets_report.php       # Reports: grouped asset report + warranty expiry, filters, CSV/print
+├── ip_allocation.php       # IP & VLAN management (admin CRUD / user read-only)
+├── wishlist.php            # Wishlist / procurement requests
+├── users.php               # User management (admin only)
+└── SQL.sql                 # Database schema
+```
+
+---
+
+## Security
+
+- **Hashed passwords** with `password_hash` / `password_verify` (bcrypt)
+- **Prepared statements** on all database queries to prevent SQL injection
+- **CSRF tokens** on every form and AJAX write
+- **Output escaping** with `htmlspecialchars` to prevent XSS
+- **Role checks enforced server-side** on every page and write action
+- **Session ID regenerated** on login
 
 ---
 
 ## Author
 
-Developed as an academic project.  
-© 2026 Xpie. All rights reserved.
+Developed as an academic project.
+© 2026 NAMIAS. All rights reserved.
