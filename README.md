@@ -2,13 +2,13 @@
 
 <img src="https://img.shields.io/badge/NAMIAS-Network%20Asset%20Management-4f46e5?style=for-the-badge&logoColor=white" alt="NAMIAS Banner"/>
 
-# 🖧 NAMIAS   Network Asset Management Information System
+# 🖧 NAMIAS — Network Asset Management Information System
 
 **A web-based administration system for managing IT assets, network IP allocations,**
-**and procurement wishlists within an organisation   with role-based access control.**
+**and procurement wishlists within an organisation — with role-based access control.**
 
 Gives IT administrators a centralised dashboard to track hardware, monitor warranty
-status, run filtered reports, and manage network configurations   while regular staff
+status, run filtered reports, and manage network configurations — while regular staff
 get a clean read-only view.
 
 <br/>
@@ -64,7 +64,7 @@ a read-only user cannot bypass it by crafting requests.
 
 ### 🔐 Authentication & Users
 - Secure login with **hashed passwords** (`password_hash` / `password_verify`)
-- Session-based access control   every page is protected; session ID regenerated on login
+- Session-based access control — every page is protected; session ID regenerated on login
 - **User Management (admin only):** create users, reset any user's password, change a
   user's role, and delete accounts (you cannot delete or demote your own account)
 - Default admin account is created automatically on first run
@@ -72,14 +72,14 @@ a read-only user cannot bypass it by crafting requests.
 ### 📦 Asset Management
 - Add, edit, and delete IT assets (laptops, monitors, peripherals, etc.)
 - Track product name, category, quantity, department, physical location, and warranty dates
-- Dynamic dropdowns for Category, Department, and Place   with inline add (no page reload)
+- Dynamic dropdowns for Category, Department, and Place — with inline add (no page reload)
 - Inline edit via modal, delete with confirmation prompt
 - Read-only users see the data without the editing controls
 
 ### 📊 Reports
-- **Asset Report**   assets grouped by **Department, Category, or Place** (selectable),
+- **Asset Report** — assets grouped by **Department, Category, or Place** (selectable),
   with per-group subtotals and a grand total quantity
-- **Warranty Expiry Report**   assets sorted by warranty end date with colour-coded status
+- **Warranty Expiry Report** — assets sorted by warranty end date with colour-coded status
   (expired / under 30 days / under 90 days / healthy)
 - **Filters** on both reports: Category, Department, Place, and a **date range** (added date
   for assets, expiry date for warranty)
@@ -131,7 +131,7 @@ The system uses a single database (`namias_db`) with the following tables:
 | `wishlist` | Procurement request items |
 
 > **Note:** the `users.password` column is `VARCHAR(255)` to hold bcrypt hashes. No
-> plaintext admin is seeded in SQL   the app creates the default admin on first run.
+> plaintext admin is seeded in SQL — the app creates the default admin on first run.
 
 ---
 
