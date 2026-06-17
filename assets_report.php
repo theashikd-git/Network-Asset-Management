@@ -126,9 +126,44 @@ $qs = http_build_query(array_filter([
     'from' => $f_from, 'to' => $f_to,
 ], fn($v) => $v !== null && $v !== ''));
 
+/* ---------- Chart datasets (respect current tab + filters) ---------- */
+$chart = ['type' => $tab];
+if ($tab === 'assets') {
+    $group_totals = [];
+    foreach ($grouped as $g => $items) {
+        $group_totals[$g] = array_sum(array_map(fn($i) => (int)$i['quantity'], $items));
+    }
+    arsort($group_totals);
+    $cat_totals = [];
+    foreach ($rows as $r) {
+        $cat_totals[$r['category']] = ($cat_totals[$r['category']] ?? 0) + (int)$r['quantity'];
+    }
+    arsort($cat_totals);
+    $chart['group_label']  = ucfirst($f_group);
+    $chart['group_labels'] = array_keys($group_totals);
+    $chart['group_values'] = array_values($group_totals);
+    $chart['cat_labels']   = array_keys($cat_totals);
+    $chart['cat_values']   = array_values($cat_totals);
+    $chart['summary'] = ['items' => count($rows), 'qty' => $grand_total, 'groups' => count($grouped)];
+} else {
+    $buckets = ['Expired' => 0, 'Under 30 days' => 0, 'Under 90 days' => 0, 'Healthy' => 0];
+    foreach ($rows as $r) {
+        [, , $days] = warranty_status($r['warranty_end']);
+        if ($days === null)  $buckets['Expired']++;
+        elseif ($days <= 30) $buckets['Under 30 days']++;
+        elseif ($days <= 90) $buckets['Under 90 days']++;
+        else                 $buckets['Healthy']++;
+    }
+    $chart['w_labels'] = array_keys($buckets);
+    $chart['w_values'] = array_values($buckets);
+    $chart['summary']  = ['items' => count($rows), 'expired' => $buckets['Expired'],
+                          'soon' => $buckets['Under 30 days'] + $buckets['Under 90 days']];
+}
+
 require_once __DIR__ . '/layout.php';
 app_header('Reports', 'report');
 ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 .report-tabs{display:flex;gap:8px;margin-bottom:20px;}
 .report-tabs a{padding:9px 18px;border-radius:10px;font-weight:600;font-size:13.5px;text-decoration:none;
@@ -217,6 +252,39 @@ app_header('Reports', 'report');
   — <?= e(date('d M Y')) ?>
 </h4>
 
+<?php if (!empty($rows)): ?>
+<!-- =============== VISUAL SUMMARY =============== -->
+<div class="stat-grid">
+  <?php if ($tab === 'assets'): ?>
+    <div class="stat"><div class="k">Matching Items</div><div class="v"><?= (int)$chart['summary']['items'] ?></div></div>
+    <div class="stat"><div class="k">Total Quantity</div><div class="v"><?= (int)$chart['summary']['qty'] ?></div></div>
+    <div class="stat"><div class="k"><?= e($chart['group_label']) ?>s</div><div class="v"><?= (int)$chart['summary']['groups'] ?></div></div>
+  <?php else: ?>
+    <div class="stat"><div class="k">Items with Warranty</div><div class="v"><?= (int)$chart['summary']['items'] ?></div></div>
+    <div class="stat"><div class="k">Expired</div><div class="v" style="color:#dc2626;"><?= (int)$chart['summary']['expired'] ?></div></div>
+    <div class="stat"><div class="k">Expiring Soon (≤90d)</div><div class="v" style="color:#d97706;"><?= (int)$chart['summary']['soon'] ?></div></div>
+  <?php endif; ?>
+</div>
+
+<div class="row g-4 mb-4">
+  <?php if ($tab === 'assets'): ?>
+    <div class="col-lg-7"><div class="card h-100">
+      <div class="card-header">Quantity by <?= e($chart['group_label']) ?></div>
+      <div class="card-body"><canvas id="chartA" height="150"></canvas></div>
+    </div></div>
+    <div class="col-lg-5"><div class="card h-100">
+      <div class="card-header">Quantity by Category</div>
+      <div class="card-body"><canvas id="chartB" height="150"></canvas></div>
+    </div></div>
+  <?php else: ?>
+    <div class="col-12"><div class="card">
+      <div class="card-header">Warranty Status Breakdown</div>
+      <div class="card-body"><canvas id="chartA" height="90"></canvas></div>
+    </div></div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <?php if (empty($rows)): ?>
   <div class="card"><div class="card-body text-center text-muted py-5">
     No records match the selected filters.
@@ -285,6 +353,41 @@ app_header('Reports', 'report');
     </tbody>
   </table>
   </div>
+<?php endif; ?>
+
+<?php if (!empty($rows)): ?>
+<script>
+const CHART = <?= json_encode($chart) ?>;
+const PALETTE = ['#4f46e5','#0891b2','#16a34a','#d97706','#db2777','#7c3aed','#0d9488','#e11d48','#2563eb','#65a30d'];
+
+Chart.defaults.font.family = "'Public Sans', sans-serif";
+Chart.defaults.color = '#64748b';
+
+if (CHART.type === 'assets') {
+  new Chart(document.getElementById('chartA'), {
+    type: 'bar',
+    data: { labels: CHART.group_labels,
+      datasets: [{ label: 'Quantity', data: CHART.group_values, backgroundColor: '#4f46e5', borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+  new Chart(document.getElementById('chartB'), {
+    type: 'doughnut',
+    data: { labels: CHART.cat_labels,
+      datasets: [{ data: CHART.cat_values, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } } }
+  });
+} else {
+  new Chart(document.getElementById('chartA'), {
+    type: 'bar',
+    data: { labels: CHART.w_labels,
+      datasets: [{ label: 'Items', data: CHART.w_values,
+        backgroundColor: ['#dc2626','#ea580c','#d97706','#16a34a'], borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+}
+</script>
 <?php endif; ?>
 
 <?php app_footer(); ?>
